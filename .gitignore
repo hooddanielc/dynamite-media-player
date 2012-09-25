@@ -1,6 +1,6 @@
-*.class
-
-# Package Files #
-*.jar
-*.war
-*.ear
+build
+dist
+dynamite_db
+derby.log
+*.log
+*.DS_Store
