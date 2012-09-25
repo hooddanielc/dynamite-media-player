@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.jaudiotagger.tag.wma.WmaContentDescriptionTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 48.24 sec
