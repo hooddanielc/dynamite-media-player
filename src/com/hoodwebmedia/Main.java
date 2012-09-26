@@ -6,8 +6,6 @@ import com.hoodwebmedia.DynamiteMediaPlayer.OnTrackProgressListener;
 import com.hoodwebmedia.DynamiteMediaPlayer.OnTrackStartListener;
 import com.hoodwebmedia.MusicFolderCrawler.OnCompleteListener;
 import com.hoodwebmedia.MusicFolderCrawler.OnProgressListener;
-import com.sun.javafx.scene.control.skin.LabeledText;
-import com.sun.javafx.scene.control.skin.TableRowSkin;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -17,19 +15,16 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Cursor;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.TableView.TableViewSelectionModel;
@@ -39,11 +34,16 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.Modality;
+import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
@@ -55,18 +55,19 @@ public class Main extends Application {
     public static DynamiteMediaManager dmm = new DynamiteMediaManager();
     public static DynamiteMediaPlayer dmp = new DynamiteMediaPlayer();
     Stage stage;
+    Stage dialogStage;
     Scene scene;
     StackPane root;
     final private BorderPane bp = new BorderPane();
     
-    Image imagePrev;
-    Image imagePlay;
-    Image imageNext;
-    Image imagePaus;
-    Image imagePrevDwn;
-    Image imagePlayDwn;
-    Image imageNextDwn;
-    Image imagePausDwn;
+    private final Image imagePrev = new Image(getClass().getResourceAsStream("rec/control_previous.png"));
+    private final Image imagePlay = new Image(getClass().getResourceAsStream("rec/control_play.png"));
+    private final Image imageNext = new Image(getClass().getResourceAsStream("rec/control_next.png"));
+    Image imagePaus = new Image(getClass().getResourceAsStream("rec/control_pause.png"));
+    Image imagePrevDwn = new Image(getClass().getResourceAsStream("rec/control_previous_down.png"));
+    Image imagePlayDwn = new Image(getClass().getResourceAsStream("rec/control_play_down.png"));
+    Image imageNextDwn = new Image(getClass().getResourceAsStream("rec/control_next_down.png"));
+    Image imagePausDwn = new Image(getClass().getResourceAsStream("rec/control_pause_down.png"));
     
     int lastTableIndex;
     
@@ -94,6 +95,9 @@ public class Main extends Application {
             @Override
             public void handle(WindowEvent t) {
                 dmp.shutDown();
+                if(dialogStage != null) {
+                    dialogStage.close();
+                }
             }
         });
     }
@@ -119,16 +123,7 @@ public class Main extends Application {
         middle.setAlignment(Pos.CENTER);
         right.setAlignment(Pos.CENTER);
         
-        // left top bar
-        imagePrev = new Image(getClass().getResourceAsStream("rec/control_previous.png"));
-        imagePlay = new Image(getClass().getResourceAsStream("rec/control_play.png"));
-        imageNext = new Image(getClass().getResourceAsStream("rec/control_next.png"));
-        imagePaus = new Image(getClass().getResourceAsStream("rec/control_pause.png"));
-        imagePrevDwn = new Image(getClass().getResourceAsStream("rec/control_previous_down.png"));
-        imagePlayDwn = new Image(getClass().getResourceAsStream("rec/control_play_down.png"));
-        imageNextDwn = new Image(getClass().getResourceAsStream("rec/control_next_down.png"));
-        imagePausDwn = new Image(getClass().getResourceAsStream("rec/control_pause_down.png"));
-        
+        // left top bar    
         Image imageVolumeUp = new Image(getClass().getResourceAsStream("rec/volumeUp.png"));
         Image imageVolumeDwn = new Image(getClass().getResourceAsStream("rec/volumeDwn.png"));
         
@@ -338,16 +333,8 @@ public class Main extends Application {
         Menu menuFile = new Menu("File");
         MenuItem menuAddFile = new MenuItem("Add file to library");
         MenuItem menuAddFolder = new MenuItem("Add folder to libary");
-        MenuItem menuTest = new MenuItem("Test");
-        menuFile.getItems().addAll(menuAddFile, menuAddFolder, menuTest);
+        menuFile.getItems().addAll(menuAddFile, menuAddFolder);
         menuBar.getMenus().addAll(menuFile);
-        
-        menuTest.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                System.out.println("YAY TESTING");
-            }
-        });
         
         menuAddFolder.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -526,6 +513,12 @@ public class Main extends Application {
         
         ContextMenu cm = new ContextMenu();
         MenuItem addPlaylist = new MenuItem("Add Playlist");
+        addPlaylist.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                showCreatePlaylistDialog();
+            }
+        });
         cm.getItems().add(addPlaylist);
         playlistTreeView.setContextMenu(cm);
         
@@ -536,6 +529,11 @@ public class Main extends Application {
     public TableView getCenter() {
         tv = new TableView();
         
+        // Context menu...
+        final ContextMenu cm = new ContextMenu();
+        tv.setContextMenu(cm);
+        
+        // Clustered GUI behavior. Please read carefully (sorry).
         tv.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent t) {
@@ -543,6 +541,28 @@ public class Main extends Application {
                     MusicItem mi = (MusicItem) tv.getFocusModel().getFocusedItem();
                     dmp.playFile("file:///"
                             + FileHelper.fixFileUri(mi.getLocation()));
+                } else if(t.getButton().equals(MouseButton.SECONDARY)) {
+                    try {
+                        cm.getItems().clear();
+                        ResultSet rs = dmm.getAllPlaylists();
+                        Menu miAddTo = new Menu("Add To Playlist");
+                        while(rs.next()) {
+                            miAddTo.getItems().add(new MenuItem(rs.getString(1)));
+                        }
+                        MenuItem miCreate = new MenuItem("Create Playlist");
+                        
+                        miCreate.setOnAction(new EventHandler<ActionEvent>() {
+                            @Override
+                            public void handle(ActionEvent t) {
+                                showCreatePlaylistDialog();
+                            }
+                        });
+                        
+                        cm.getItems().addAll(miCreate, miAddTo);
+                        tv.getContextMenu().show(scene.getWindow());
+                    } catch (SQLException ex) {
+                        Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
         });
@@ -683,5 +703,56 @@ public class Main extends Application {
         } catch (SQLException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    public void showCreatePlaylistDialog() {
+        final Stage dialog = new Stage(StageStyle.TRANSPARENT);
+        dialogStage = dialog;
+        dialog.initModality(Modality.WINDOW_MODAL);
+        dialog.initOwner(stage);
+        VBox vb = new VBox(8);
+        HBox hBox = new HBox(8);
+        Scene dialogScene = new Scene(vb);
+        dialog.setScene(dialogScene);
+        final TextField tf = new TextField();
+        Button bOk = new Button("Ok");
+        Button bCancel = new Button("Cancel");
+        hBox.getChildren().addAll(bOk, bCancel);
+        vb.getChildren().addAll(tf, hBox);
+        vb.setAlignment(Pos.CENTER);
+        hBox.setAlignment(Pos.CENTER);
+        vb.setPadding(new Insets(8));
+
+        bOk.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                if(!tf.getText().equals("")) {
+                    addPlaylist(tf.getText());
+                    dialog.close();
+                }
+            }
+        });
+        bCancel.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                dialog.close();
+            }
+        });
+        tf.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent t) {
+                if(t.getCode() == KeyCode.ENTER) {
+                    if(!tf.getText().equals("")) {
+                        addPlaylist(tf.getText());
+                        dialog.close();
+                    }
+                }
+            }
+        });
+        dialog.show();
+    }
+    
+    public void addPlaylist(String name) {
+        System.out.println("Adding a playlist called " + name);
     }
 }

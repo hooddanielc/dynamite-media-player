@@ -84,6 +84,16 @@ public class DynamiteMediaManager {
     
     // AUDIO PLAYLIST //
     /////////////////////////////////////////////////////////////
+    public ResultSet getAllPlaylists() {
+        ResultSet rs = null;
+        try {
+            rs = s.executeQuery("SELECT * FROM audio_playlist");
+        } catch (SQLException ex) {
+            Logger.getLogger(DynamiteMediaManager.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return rs;
+    }
+    
     public String addPlaylist(String name, Boolean doCommit) {
         String result = null;
         try {
