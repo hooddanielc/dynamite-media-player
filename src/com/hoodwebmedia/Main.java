@@ -6,6 +6,8 @@ import com.hoodwebmedia.DynamiteMediaPlayer.OnTrackProgressListener;
 import com.hoodwebmedia.DynamiteMediaPlayer.OnTrackStartListener;
 import com.hoodwebmedia.MusicFolderCrawler.OnCompleteListener;
 import com.hoodwebmedia.MusicFolderCrawler.OnProgressListener;
+import com.sun.javafx.scene.control.skin.LabeledText;
+import com.sun.javafx.scene.control.skin.TreeCellSkin;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,14 +36,11 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
-import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -60,14 +59,26 @@ public class Main extends Application {
     StackPane root;
     final private BorderPane bp = new BorderPane();
     
-    private final Image imagePrev = new Image(getClass().getResourceAsStream("rec/control_previous.png"));
-    private final Image imagePlay = new Image(getClass().getResourceAsStream("rec/control_play.png"));
-    private final Image imageNext = new Image(getClass().getResourceAsStream("rec/control_next.png"));
-    Image imagePaus = new Image(getClass().getResourceAsStream("rec/control_pause.png"));
-    Image imagePrevDwn = new Image(getClass().getResourceAsStream("rec/control_previous_down.png"));
-    Image imagePlayDwn = new Image(getClass().getResourceAsStream("rec/control_play_down.png"));
-    Image imageNextDwn = new Image(getClass().getResourceAsStream("rec/control_next_down.png"));
-    Image imagePausDwn = new Image(getClass().getResourceAsStream("rec/control_pause_down.png"));
+    private final Image imagePrev = new Image(getClass()
+            .getResourceAsStream("rec/control_previous.png"));
+    private final Image imagePlay = new Image(getClass()
+            .getResourceAsStream("rec/control_play.png"));
+    private final Image imageNext = new Image(getClass()
+            .getResourceAsStream("rec/control_next.png"));
+    Image imagePaus = new Image(getClass()
+            .getResourceAsStream("rec/control_pause.png"));
+    Image imagePrevDwn = new Image(getClass()
+            .getResourceAsStream("rec/control_previous_down.png"));
+    Image imagePlayDwn = new Image(getClass()
+            .getResourceAsStream("rec/control_play_down.png"));
+    Image imageNextDwn = new Image(getClass()
+            .getResourceAsStream("rec/control_next_down.png"));
+    Image imagePausDwn = new Image(getClass()
+            .getResourceAsStream("rec/control_pause_down.png"));
+    VBox leftBar;
+    
+    boolean viewingPlaylist = false;
+    String viewingPlaylistName;
     
     int lastTableIndex;
     
@@ -77,7 +88,8 @@ public class Main extends Application {
     
     TableView tv;
     
-    public static ObservableList<MusicItem> tableData = FXCollections.observableArrayList();
+    public static ObservableList<MusicItem> tableData
+            = FXCollections.observableArrayList();
     
     @Override
     public void start(Stage primaryStage) {
@@ -302,9 +314,11 @@ public class Main extends Application {
                 if(e.getCode().equals(KeyCode.ENTER)) {
                     if(tf.getText().length() > 2) {
                         ResultSet rs = dmm.getAllAudioFilesSearch(tf.getText());
+                        viewingPlaylist = false;
                         fillMusicTable(rs);
                     }
                 } else if(tf.getText().equals("")) {
+                    viewingPlaylist = false;
                     fillMusicTable(dmm.getAllAudioFiles());
                 }
             }
@@ -313,6 +327,7 @@ public class Main extends Application {
             @Override
             public void handle(ActionEvent arg0) {
                 if(!tf.getText().equals("")) {
+                    viewingPlaylist = false;
                     ResultSet rs = dmm.getAllAudioFilesSearch(tf.getText());
                     fillMusicTable(rs);
                 }
@@ -406,6 +421,7 @@ public class Main extends Application {
                             });
                             dmm.dbConnection.commit();
                             tableData.remove(0, tableData.size());
+                            viewingPlaylist = false;
                             fillMusicTable(dmm.getAllAudioFiles());
                             bp.setLeft(getLeftBar());
                         } catch (SQLException ex) {
@@ -426,25 +442,27 @@ public class Main extends Application {
         body.setPrefWidth(175);
         
         // Music Item
-        Image musicIcon = new Image(getClass().getResourceAsStream("rec/ico_music.png"));
-        Image playlistIcon = new Image(getClass().getResourceAsStream("rec/ico_playlist.png"));
+        Image musicIcon = new Image(getClass()
+                .getResourceAsStream("rec/ico_music.png"));
+        
         
         ImageView musicImage = new ImageView(musicIcon);
-        ImageView playlistImage = new ImageView(playlistIcon);
         
         musicImage.setFitHeight(20);
         musicImage.setFitWidth(20);
-        playlistImage.setFitHeight(20);
-        playlistImage.setFitWidth(20);
         
-        TreeItem<String> musicItem = new TreeItem<String> ("Music", musicImage);
-        TreeItem<String> artistsItem = new TreeItem<String> ("Artists");
+        
+        TreeItem<String> musicItem;
+        musicItem = new TreeItem<> ("Music", musicImage);
+        TreeItem<String> artistsItem;
+        artistsItem = new TreeItem<> ("Artists");
         
         musicItem.getChildren().add(artistsItem);
 
         ResultSet rs = dmm.getDistinctArtist();
         
-        ArrayList<String> artistList = new ArrayList<String>();
+        ArrayList<String> artistList;
+        artistList = new ArrayList<>();
         try {
             while(rs.next()) {
                 String artist = rs.getString(1);
@@ -458,7 +476,8 @@ public class Main extends Application {
         }
 
         for(String artist : artistList) {
-            TreeItem<String> artistItem = new TreeItem<String> (artist);
+            TreeItem<String> artistItem;
+            artistItem = new TreeItem<> (artist);
             artistsItem.getChildren().add(artistItem);
             ResultSet rs2 = dmm.getDistinctAlbumsByArtist(artist);
             try {
@@ -467,20 +486,20 @@ public class Main extends Application {
                     if(album.equals("")) {
                         album = "Unknown";
                     }
-                    TreeItem<String> albumItem = new TreeItem<String> (album);
+                    TreeItem<String> albumItem;
+                    albumItem = new TreeItem<> (album);
                     artistItem.getChildren().add(albumItem);
                 }
             } catch (SQLException ex) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Main.class.getName())
+                        .log(Level.SEVERE, null, ex);
             }
         }
 
-        TreeItem<String> playlistItem = new TreeItem<String> ("Playlist", playlistImage);
-
         musicItem.setExpanded(true);
-
-        TreeView<String> playlistTreeView = new TreeView<String> (playlistItem);
-        final TreeView<String> musicTreeView = new TreeView<String>(musicItem);
+        
+        final TreeView<String> musicTreeView;
+        musicTreeView = new TreeView<>(musicItem);
         
         musicTreeView.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
@@ -499,31 +518,111 @@ public class Main extends Application {
                             ti.setExpanded(true);
                         } else if(parentValue.equals("Artists")) {
                             // fill music table specific by album
+                            viewingPlaylist = false;
                             fillMusicTable(dmm.getFilesFromArtist(itemValue));
                         } else {
                             // fill music table specific by artist
-                            fillMusicTable(dmm.getFilesFromAlbum(parentValue, itemValue));
+                            viewingPlaylist = false;
+                            fillMusicTable(dmm
+                                    .getFilesFromAlbum(parentValue, itemValue));
                         }
                     } else {
+                        viewingPlaylist = false;
                         fillMusicTable(dmm.getAllAudioFiles());
                     }
                 }
             }
         });
+                
+        body.getChildren().addAll(musicTreeView, getPlaylistTreeView());
+        leftBar = body;
+        return body;
+    }
+    
+    public TreeView<String> getPlaylistTreeView() {
+        Image playlistIcon = new Image(getClass()
+                .getResourceAsStream("rec/ico_playlist.png"));
+        ImageView playlistImage = new ImageView(playlistIcon);
+        playlistImage.setFitHeight(20);
+        playlistImage.setFitWidth(20);
+        TreeItem<String> playlistItem;
+        playlistItem = new TreeItem<> ("Playlist", playlistImage);
+        playlistItem.setExpanded(true);
+        
+        TreeView<String> playlistTreeView;
+        playlistTreeView = new TreeView<> (playlistItem);
         
         ContextMenu cm = new ContextMenu();
         MenuItem addPlaylist = new MenuItem("Add Playlist");
+        final MenuItem deletePlaylist = new MenuItem("");
+        
+        deletePlaylist.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                String deleteText = deletePlaylist.getText();
+                if(!deleteText.equals("")) {
+                    String item = deleteText.substring(7, deleteText.length());
+                    dmm.removePlaylist(item);
+                    leftBar.getChildren().remove(1);
+                    leftBar.getChildren().add(getPlaylistTreeView());
+                }
+            }
+        });
         addPlaylist.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
                 showCreatePlaylistDialog();
             }
         });
-        cm.getItems().add(addPlaylist);
+        
+        cm.getItems().addAll(addPlaylist, deletePlaylist);
+        
+        ResultSet rs = dmm.getAllPlaylists();
+        try {
+            while(rs.next()) {
+                TreeItem<String> playlistChild = new TreeItem<>(rs.getString(1));
+                playlistItem.getChildren().add(playlistChild);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         playlistTreeView.setContextMenu(cm);
         
-        body.getChildren().addAll(musicTreeView, playlistTreeView);
-        return body;
+        playlistTreeView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent t) {
+                try {
+                    String item;
+                    String className = t.getTarget().getClass().getName();
+                    System.out.println();
+                    if(className.equals("com.sun.javafx.scene.control.skin.LabeledText")) {
+                        LabeledText lt = (LabeledText) t.getTarget();
+                        item = lt.getText();
+                    } else {
+                        TreeCellSkin tcs = (TreeCellSkin) t.getTarget();
+                        LabeledText lt = (LabeledText) tcs.getChildren().get(0);
+                        item = lt.getText();
+                    }
+                    if(t.getButton() == MouseButton.PRIMARY) {
+                        viewingPlaylist = true;
+                        viewingPlaylistName = item;
+                        fillMusicTable(dmm.getFilesFromPlaylist(item));
+                    } else if(t.getButton() == MouseButton.SECONDARY) {
+                        if(!item.equals("Playlist")) {
+                            deletePlaylist.setText("Delete " + item);
+                        } else {
+                            deletePlaylist.setText("");
+                        }
+                        
+                    }
+                } catch(Exception e) {
+                    deletePlaylist.setText("");
+                }
+            }
+        });
+        
+        return playlistTreeView;
     }
     
     public TableView getCenter() {
@@ -545,10 +644,35 @@ public class Main extends Application {
                     try {
                         cm.getItems().clear();
                         ResultSet rs = dmm.getAllPlaylists();
-                        Menu miAddTo = new Menu("Add To Playlist");
+                        Menu miAddTo = new Menu("Add Checked To Playlist");
                         while(rs.next()) {
-                            miAddTo.getItems().add(new MenuItem(rs.getString(1)));
+                            final MenuItem miAddToThis = new MenuItem(rs.getString(1));
+                            miAddTo.getItems().add(miAddToThis);
+                            miAddToThis.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent t) {
+                                    String item = miAddToThis.getText();
+                                    addCheckedItemsToPlaylist(item);
+                                }
+                            });
                         }
+                        if(viewingPlaylist) {
+                            MenuItem miRemove = new MenuItem("Remove checked from " + viewingPlaylistName);
+                            cm.getItems().add(miRemove);
+                            miRemove.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent t) {
+                                    ObservableList<MusicItem> ol = tv.getItems();
+                                    for(MusicItem mi : ol) {
+                                        if(mi.getChecked()) {
+                                            dmm.removeFileFromPlaylist(viewingPlaylistName, mi.getLocation());
+                                        }
+                                    }
+                                    fillMusicTable(dmm.getFilesFromPlaylist(viewingPlaylistName));
+                                }
+                            });
+                        }
+                        
                         MenuItem miCreate = new MenuItem("Create Playlist");
                         
                         miCreate.setOnAction(new EventHandler<ActionEvent>() {
@@ -605,6 +729,7 @@ public class Main extends Application {
         tv.getSelectionModel().setCellSelectionEnabled(true);
         
         tv.setItems(tableData);
+        viewingPlaylist = false;
         fillMusicTable(dmm.getAllAudioFiles());        
         return tv;
     }
@@ -615,6 +740,7 @@ public class Main extends Application {
             checkBox = new CheckBox();
             
             checkBox.selectedProperty().addListener(new ChangeListener<Boolean> () {
+                @Override
                 public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                     MusicItem mi = (MusicItem) getTableRow().getItem();
                     if(mi == null) {
@@ -624,8 +750,6 @@ public class Main extends Application {
                     }
                 }
             });
-            
-            
             
             // Select multiple checkbox's while holding shift
             checkBox.setOnMouseClicked(new EventHandler<MouseEvent>() {
@@ -670,9 +794,6 @@ public class Main extends Application {
             super.updateSelected(b);
             checkBox.setSelected(true);
         }
-        
-        
-        
     }
     
     public void playNextTrack(boolean previous) {
@@ -754,5 +875,18 @@ public class Main extends Application {
     
     public void addPlaylist(String name) {
         System.out.println("Adding a playlist called " + name);
+        dmm.addPlaylist(name, true);
+        leftBar.getChildren().remove(1);
+        leftBar.getChildren().add(getPlaylistTreeView());
+    }
+    
+    public void addCheckedItemsToPlaylist(String playlistName) {
+        System.out.println("Adding these checked items to " + playlistName);
+        ObservableList<MusicItem> tvData = tv.getItems();
+        for(MusicItem mi : tvData) {
+            if(mi.getChecked()) {
+                dmm.addToPlaylist(playlistName, mi.getLocation());
+            }
+        }
     }
 }

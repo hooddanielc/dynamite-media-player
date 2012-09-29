@@ -131,6 +131,7 @@ public class DynamiteMediaManager {
                     + playlistName + "'");
             s.execute("DELETE FROM audio_playlist WHERE playlist_name='"
                     + playlistName + "'");
+            dbConnection.commit();
         } catch (SQLException ex) {
             Logger.getLogger(DynamiteMediaManager.class.getName()).log(Level.SEVERE, null, ex);
         }
